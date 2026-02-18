@@ -25,6 +25,9 @@ st.sidebar.markdown("### Debug Info")
 st.sidebar.write("Price Std Dev:", df["net_price"].std())
 st.sidebar.write("Units Std Dev:", df["units"].std())
 
+st.write("Overall price-units correlation:",
+         df["net_price"].corr(df["units"]))
+
 # KPIs
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Revenue Lift",
