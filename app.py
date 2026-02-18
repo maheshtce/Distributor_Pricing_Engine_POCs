@@ -21,6 +21,10 @@ price_increase = st.sidebar.slider(
 
 sim_df = compute_price_lift_impact(cube, price_increase)
 
+st.sidebar.markdown("### Debug Info")
+st.sidebar.write("Price Std Dev:", df["net_price"].std())
+st.sidebar.write("Units Std Dev:", df["units"].std())
+
 # KPIs
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Revenue Lift",
