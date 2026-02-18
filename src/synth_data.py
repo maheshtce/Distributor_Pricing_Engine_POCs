@@ -10,7 +10,7 @@ def make_synthetic_transactions(n_rows=80000, seed=42):
     categories = ["Dental", "MedSurg", "Lab"]
 
     # Segment-level elasticity priors (DSOs tend to be more price sensitive)
-    seg_el = {"DSO": -1.6, "Clinic": -1.2, "Small Practice": -1.0, "Hospital": -0.8}
+    seg_el = {"DSO": -2.2, "Clinic": -1.8, "Small Practice": -1.4, "Hospital": -1.0}
     # Region tweaks
     reg_adj = {"Northeast": -0.1, "South": -0.2, "Midwest": 0.0, "West": -0.15}
 
@@ -24,7 +24,7 @@ def make_synthetic_transactions(n_rows=80000, seed=42):
     base_price = np.array([sku_base_price[s] for s in sku])
 
     # Price varies around base price (promos / negotiations)
-    promo_shock = rng.normal(0, 0.12, n_rows)  # ~ +/- 12% typical
+    promo_shock = rng.normal(0, 0.35, n_rows)  # ~ +/- 35% typical
     net_price = np.clip(base_price * np.exp(promo_shock), 2.0, None)
 
     # Unit cost correlated with price
@@ -41,7 +41,7 @@ def make_synthetic_transactions(n_rows=80000, seed=42):
     seg_scale = np.where(segment == "DSO", 110, np.where(segment == "Hospital", 85, 60))
 
     # Demand model: units = scale * (price/base_price)^elasticity * noise
-    noise = rng.lognormal(mean=0, sigma=0.35, size=n_rows)
+    noise = rng.lognormal(mean=0, sigma=0.15, size=n_rows)
     expected_units = (cat_scale * seg_scale/80) * (net_price / base_price) ** (true_el) * noise
 
     # Convert to integers (poisson around expected)
