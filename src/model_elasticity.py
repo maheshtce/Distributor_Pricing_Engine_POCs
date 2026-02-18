@@ -2,71 +2,89 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-def _fit_elasticity_loglog(group: pd.DataFrame, min_rows: int = 40) -> float | None:
-    """
-    Fits: log(units) = a + b*log(price)
-    Returns b (elasticity). If insufficient data/variation, returns None.
-    """
-    g = group.copy()
-    g = g[(g["units"] > 0) & (g["net_price"] > 0)]
-
+def _loglog_elasticity(g: pd.DataFrame, min_rows: int, min_unique_prices: int) -> float | None:
+    g = g[(g["units"] > 0) & (g["net_price"] > 0)].copy()
     if len(g) < min_rows:
         return None
-
-    # Need price variation, otherwise regression is meaningless
-    if g["net_price"].nunique() < 5:
+    if g["net_price"].nunique() < min_unique_prices:
         return None
 
     X = np.log(g[["net_price"]].values)
     y = np.log(g["units"].values)
 
-    model = LinearRegression()
-    model.fit(X, y)
-    return float(model.coef_[0])
+    # Fit log-log demand curve
+    lr = LinearRegression()
+    lr.fit(X, y)
+    return float(lr.coef_[0])
 
 def derive_elasticity_cube(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Produces SKU × segment × region cube with elasticity + summary stats.
+    Returns cube with elasticity at SKU×segment×region using raw transactions,
+    with fallbacks for sparse groups.
     """
     df = df.copy()
     df["margin_pct"] = (df["net_price"] - df["unit_cost"]) / df["net_price"]
 
-    # 1) Fit group elasticities
+    # Summary stats at the target grain
     keys = ["sku", "segment", "region"]
-    elasticities = []
-    for (sku, seg, reg), g in df.groupby(keys):
-        e = _fit_elasticity_loglog(g)
-        elasticities.append((sku, seg, reg, e, len(g)))
-
-    e_df = pd.DataFrame(elasticities, columns=["sku", "segment", "region", "elasticity_raw", "n_rows"])
-
-    # 2) Fallbacks: if group elasticity missing, use segment×region, else global
-    # segment×region fallback
-    sr_el = []
-    for (seg, reg), g in df.groupby(["segment", "region"]):
-        e = _fit_elasticity_loglog(g, min_rows=200)
-        sr_el.append((seg, reg, e))
-    sr_df = pd.DataFrame(sr_el, columns=["segment", "region", "elasticity_sr"])
-
-    # global fallback
-    global_e = _fit_elasticity_loglog(df, min_rows=500) or -1.0
-
-    # 3) Merge summary stats
     summary = df.groupby(keys).agg(
         avg_price=("net_price", "mean"),
         avg_units=("units", "mean"),
         avg_margin=("margin_pct", "mean"),
         category=("category", "first"),
+        n=("units", "size"),
+        unique_prices=("net_price", "nunique"),
     ).reset_index()
 
-    out = summary.merge(e_df, on=keys, how="left").merge(sr_df, on=["segment", "region"], how="left")
+    # 1) SKU×segment×region elasticity
+    esr = []
+    for k, g in df.groupby(keys):
+        e = _loglog_elasticity(g, min_rows=60, min_unique_prices=6)
+        esr.append((*k, e))
+    esr = pd.DataFrame(esr, columns=["sku", "segment", "region", "e_sku_seg_reg"])
 
-    # final elasticity
-    out["elasticity"] = out["elasticity_raw"]
-    out["elasticity"] = out["elasticity"].fillna(out["elasticity_sr"])
-    out["elasticity"] = out["elasticity"].fillna(global_e)
+    # 2) SKU×segment fallback
+    ess = []
+    for (sku, seg), g in df.groupby(["sku", "segment"]):
+        e = _loglog_elasticity(g, min_rows=150, min_unique_prices=8)
+        ess.append((sku, seg, e))
+    ess = pd.DataFrame(ess, columns=["sku", "segment", "e_sku_seg"])
 
-    # optional clipping to keep sane bounds for dashboards
-    out["elasticity"] = out["elasticity"].clip(lower=-6.0, upper=1.0)
+    # 3) SKU-only fallback
+    esk = []
+    for sku, g in df.groupby(["sku"]):
+        e = _loglog_elasticity(g, min_rows=300, min_unique_prices=10)
+        esk.append((sku, e))
+    esk = pd.DataFrame(esk, columns=["sku", "e_sku"])
+
+    # 4) segment×region fallback
+    esr2 = []
+    for (seg, reg), g in df.groupby(["segment", "region"]):
+        e = _loglog_elasticity(g, min_rows=800, min_unique_prices=10)
+        esr2.append((seg, reg, e))
+    esr2 = pd.DataFrame(esr2, columns=["segment", "region", "e_seg_reg"])
+
+    # 5) global fallback
+    e_global = _loglog_elasticity(df, min_rows=3000, min_unique_prices=15)
+    if e_global is None:
+        e_global = -1.0  # sane default
+
+    out = (
+        summary
+        .merge(esr, on=keys, how="left")
+        .merge(ess, on=["sku", "segment"], how="left")
+        .merge(esk, on=["sku"], how="left")
+        .merge(esr2, on=["segment", "region"], how="left")
+    )
+
+    # Final elasticity with fallbacks
+    out["elasticity"] = out["e_sku_seg_reg"]
+    out["elasticity"] = out["elasticity"].fillna(out["e_sku_seg"])
+    out["elasticity"] = out["elasticity"].fillna(out["e_sku"])
+    out["elasticity"] = out["elasticity"].fillna(out["e_seg_reg"])
+    out["elasticity"] = out["elasticity"].fillna(e_global)
+
+    # Clip to plausible band for distribution products
+    out["elasticity"] = out["elasticity"].clip(-4.0, -0.05)
 
     return out
