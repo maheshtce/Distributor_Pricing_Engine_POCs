@@ -6,6 +6,11 @@ from src.synth_data import make_synthetic_transactions
 from src.model_elasticity import derive_elasticity_cube
 from src.uplift import compute_price_lift_impact
 
+df = make_synthetic_transactions()
+
+# 2️⃣ Build elasticity cube
+cube = derive_elasticity_cube(df)
+
 with st.sidebar:
     st.header("Controls")
 
