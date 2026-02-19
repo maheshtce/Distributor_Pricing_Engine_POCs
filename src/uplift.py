@@ -38,6 +38,7 @@ def compute_price_lift_impact(df, price_increase_pct):
         0.25 * df["rev_uplift_norm"] -
         0.10 * df["vol_risk_norm"]
     )
+return df
 
 def assign_tier(score):
     if score >= 0.65:
@@ -50,4 +51,4 @@ def assign_tier(score):
 df["raise_tier"] = df["raise_score"].apply(assign_tier)
     
 
-return df
+
