@@ -78,11 +78,11 @@ col3.metric(
 #    title="Elasticity vs Margin"
 #)
 
-st.write("Current scoring config:", {
-    "price_increase_%": price_increase,
-    "weights": {"elasticity": w_el, "margin": w_mg, "rev_uplift": w_rev, "vol_risk_penalty": w_risk},
-    "thresholds": {"tier1": t1, "tier2": t2}
-})
+#st.write("Current scoring config:", {
+#    "price_increase_%": price_increase,
+#    "weights": {"elasticity": w_el, "margin": w_mg, "rev_uplift": w_rev, "vol_risk_penalty": w_risk},
+#    "thresholds": {"tier1": t1, "tier2": t2}
+#})
 
 
 fig_tier = px.histogram(
