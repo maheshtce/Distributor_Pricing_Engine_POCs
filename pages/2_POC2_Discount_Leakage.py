@@ -13,7 +13,7 @@ from src.poc2_leakage import (
 #st.set_page_config(page_title="Pricing Intelligence Engine – POC2", layout="wide")
 
 st.title("AI-Driven Pricing Intelligence Engine")
-st.caption("POC 2 — Customer Segmentation + Discount Leakage (Synthetic data)")
+st.caption("Customer Segmentation + Discount Leakage (Synthetic data)")
 
 # -----------------------------
 # Sidebar Controls
