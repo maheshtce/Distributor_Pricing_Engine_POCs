@@ -7,7 +7,7 @@ from src.model_elasticity import derive_elasticity_cube
 from src.uplift import compute_price_lift_impact
 
 
-st.set_page_config(page_title="Pricing Intelligence Engine – POC1", layout="wide")
+#st.set_page_config(page_title="Pricing Intelligence Engine – POC1", layout="wide")
 
 st.title("AI-Driven Pricing Intelligence Engine")
 st.caption("POC 1 — SKU × Segment × Region Elasticity + Raise Score (Synthetic data)")
