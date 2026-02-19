@@ -11,13 +11,6 @@ Use the **left sidebar** to open:
 - **Price Raise Engine:** Elasticity + scenario simulation + raise score + action table  
 - **Discount Leakage Engine:** Customer segmentation + leakage detection + rep leaderboard  
 
-st.markdown("""
-<style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-</style>
-""", unsafe_allow_html=True)
 
 ### Notes
 - All data is **synthetic** and for demonstration only.
