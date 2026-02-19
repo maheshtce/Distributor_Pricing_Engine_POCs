@@ -8,8 +8,8 @@ st.caption("Interactive POCs for Distribution Pricing (Synthetic data)")
 st.markdown("""
 ### How to navigate
 Use the **left sidebar** to open:
-- **POC 1 — Price Raise Engine:** Elasticity + scenario simulation + raise score + action table  
-- **POC 2 — Discount Leakage Engine:** Customer segmentation + leakage detection + rep leaderboard  
+- **Price Raise Engine:** Elasticity + scenario simulation + raise score + action table  
+- **Discount Leakage Engine:** Customer segmentation + leakage detection + rep leaderboard  
 
 ### Notes
 - All data is **synthetic** and for demonstration only.
