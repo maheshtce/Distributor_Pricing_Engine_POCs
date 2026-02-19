@@ -9,6 +9,10 @@ def make_synthetic_transactions(n_rows=80000, seed=42):
     regions = ["Northeast", "South", "Midwest", "West"]
     categories = ["Dental", "MedSurg", "Lab"]
 
+    # NEW: customers + reps (for POC2)
+    customer_ids = [f"CUST_{i}" for i in range(1, 501)]
+    sales_reps = [f"REP_{i}" for i in range(1, 41)]
+
     # Segment-level elasticity priors (DSOs tend to be more price sensitive)
     seg_el = {"DSO": -2.2, "Clinic": -1.8, "Small Practice": -1.4, "Hospital": -1.0}
     # Region tweaks
@@ -19,6 +23,10 @@ def make_synthetic_transactions(n_rows=80000, seed=42):
     region = rng.choice(regions, n_rows)
     category = rng.choice(categories, n_rows)
 
+    # NEW: customer_id + sales_rep_id
+    customer_id = rng.choice(customer_ids, n_rows)
+    sales_rep_id = rng.choice(sales_reps, n_rows)
+
     # Base price per SKU (lognormal gives a realistic skew)
     sku_base_price = {s: float(rng.lognormal(mean=3.1, sigma=0.5)) for s in skus}  # ~ $10-$80 typical
     base_price = np.array([sku_base_price[s] for s in sku])
@@ -26,6 +34,11 @@ def make_synthetic_transactions(n_rows=80000, seed=42):
     # Price varies around base price (promos / negotiations)
     promo_shock = rng.normal(0, 0.35, n_rows)  # ~ +/- 35% typical
     net_price = np.clip(base_price * np.exp(promo_shock), 2.0, None)
+
+    # NEW: list price (typical list vs net spread)
+    # Keep list_price >= net_price always
+    list_multiplier = rng.uniform(1.10, 1.35, n_rows)
+    list_price = np.clip(net_price * list_multiplier, net_price, None)
 
     # Unit cost correlated with price
     unit_cost = np.clip(net_price * rng.uniform(0.55, 0.80, n_rows), 1.0, None)
@@ -48,14 +61,18 @@ def make_synthetic_transactions(n_rows=80000, seed=42):
     units = rng.poisson(lam=np.clip(expected_units, 0.2, 500))
 
     df = pd.DataFrame({
+        "customer_id": customer_id,     # NEW
+        "sales_rep_id": sales_rep_id,   # NEW (optional but useful)
         "sku": sku,
         "segment": segment,
         "region": region,
         "category": category,
+        "list_price": list_price,       # NEW
         "net_price": net_price,
         "unit_cost": unit_cost,
         "units": units,
         "contract_flag": contract_flag,
     })
-    df["margin_pct"] = (df["net_price"] - df["unit_cost"]) / df["net_price"]
+
+    df["margin_pct"] = (df["net_price"] - df["unit_cost"]) / (df["net_price"] + 1e-9)
     return df
